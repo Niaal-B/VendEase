@@ -6,7 +6,7 @@ VendEase is a robust Vendor Management System built with Django (Backend) and Re
 
 - **Backend:** Django 5, Django REST Framework
 - **Frontend:** React, Vite, TailwindCSS (optional)
-- **Database:** SQLite (Development) / PostgreSQL (Production ready)
+- **Database:** PostgreSQL (Production ready)
 
 ## Features
 
