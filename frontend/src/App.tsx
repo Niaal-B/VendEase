@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { MainLayout } from "./components/layout/main-layout";
 import { AuthGuard } from "./components/layout/auth-guard";
 import { LoginPage } from "./pages/auth/login";
+import { VendorsPage } from "./pages/vendors";
 
 function Home() {
   return (
@@ -34,7 +35,7 @@ const router = createBrowserRouter([
         element: <MainLayout />,
         children: [
           { path: "/", element: <Home /> },
-          { path: "/vendors", element: <Page title="Vendors" /> },
+          { path: "/vendors", element: <VendorsPage /> },
           { path: "/purchase-orders", element: <Page title="Purchase Orders" /> },
         ],
       },
