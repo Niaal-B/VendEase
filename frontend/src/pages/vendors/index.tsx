@@ -1,9 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
-import { listVendors, createVendor, updateVendor, deleteVendor, type Vendor, type VendorPayload } from "@/api/vendors";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  listVendors,
+  createVendor,
+  updateVendor,
+  deleteVendor,
+  type Vendor,
+  type VendorPayload,
+} from "@/api/vendors";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type FormMode = "create" | "edit";
 
@@ -19,15 +40,20 @@ export function VendorsPage() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
   const [form, setForm] = useState<VendorPayload>(emptyForm);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      setSuccess(null);
       try {
         const data = await listVendors();
         setVendors(data);
@@ -41,6 +67,12 @@ export function VendorsPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!success) return;
+    const id = setTimeout(() => setSuccess(null), 3000);
+    return () => clearTimeout(id);
+  }, [success]);
+
   const handleSelectVendor = (vendor: Vendor) => {
     setFormMode("edit");
     setSelectedVendorId(vendor.id);
@@ -50,6 +82,7 @@ export function VendorsPage() {
       address: vendor.address,
       vendor_code: vendor.vendor_code,
     });
+    setIsDialogOpen(true);
   };
 
   const handleResetForm = () => {
@@ -66,15 +99,19 @@ export function VendorsPage() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setSuccess(null);
     try {
       if (formMode === "create") {
         const created = await createVendor(form);
         setVendors((prev) => [created, ...prev]);
-        handleResetForm();
+        setSuccess("Vendor created successfully.");
       } else if (formMode === "edit" && selectedVendorId != null) {
         const updated = await updateVendor(selectedVendorId, form);
         setVendors((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+        setSuccess("Vendor updated successfully.");
       }
+      handleResetForm();
+      setIsDialogOpen(false);
     } catch (err) {
       console.error(err);
       setError("Failed to save vendor. Please check the data and try again.");
@@ -83,17 +120,29 @@ export function VendorsPage() {
     }
   };
 
-  const handleDelete = async (vendor: Vendor) => {
-    if (!window.confirm(`Delete vendor "${vendor.name}"?`)) return;
+  const handleDeleteClick = (vendor: Vendor, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setVendorToDelete(vendor);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!vendorToDelete) return;
     try {
-      await deleteVendor(vendor.id);
-      setVendors((prev) => prev.filter((v) => v.id !== vendor.id));
-      if (selectedVendorId === vendor.id) {
+      setError(null);
+      setSuccess(null);
+      await deleteVendor(vendorToDelete.id);
+      setVendors((prev) => prev.filter((v) => v.id !== vendorToDelete.id));
+      if (selectedVendorId === vendorToDelete.id) {
         handleResetForm();
       }
+      setSuccess("Vendor deleted successfully.");
     } catch (err) {
       console.error(err);
       setError("Failed to delete vendor. Please try again.");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setVendorToDelete(null);
     }
   };
 
@@ -163,14 +212,20 @@ export function VendorsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+      <div className="grid gap-6">
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>Vendors</CardTitle>
               <CardDescription>Manage vendor directory and performance overview.</CardDescription>
             </div>
-            <Button size="sm" onClick={handleResetForm}>
+            <Button
+              size="sm"
+              onClick={() => {
+                handleResetForm();
+                setIsDialogOpen(true);
+              }}
+            >
               + Add vendor
             </Button>
           </CardHeader>
@@ -231,10 +286,7 @@ export function VendorsPage() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(vendor);
-                              }}
+                              onClick={(e) => handleDeleteClick(vendor, e)}
                             >
                               Delete
                             </Button>
@@ -247,72 +299,113 @@ export function VendorsPage() {
               </div>
             )}
             {error && !loading && (
-              <div className="px-4 py-3 text-sm text-destructive border-t bg-destructive/10">{error}</div>
+              <div className="px-4 py-3 text-sm text-destructive border-t bg-destructive/10">
+                {error}
+              </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{formMode === "create" ? "Add vendor" : "Edit vendor"}</CardTitle>
-            <CardDescription>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{formMode === "create" ? "Add vendor" : "Edit vendor"}</DialogTitle>
+            <DialogDescription>
               {formMode === "create"
                 ? "Provide vendor details to register a new vendor."
                 : "Update vendor details and save your changes."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={form.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vendor_code">Vendor code</Label>
-                <Input
-                  id="vendor_code"
-                  value={form.vendor_code}
-                  onChange={(e) => handleChange("vendor_code", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact_details">Contact details</Label>
-                <Input
-                  id="contact_details"
-                  value={form.contact_details}
-                  onChange={(e) => handleChange("contact_details", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={form.address}
-                  onChange={(e) => handleChange("address", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                {formMode === "edit" && (
-                  <Button type="button" variant="ghost" onClick={handleResetForm}>
-                    Cancel
-                  </Button>
-                )}
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "Saving..." : formMode === "create" ? "Create vendor" : "Save changes"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vendor_code">Vendor code</Label>
+              <Input
+                id="vendor_code"
+                value={form.vendor_code}
+                onChange={(e) => handleChange("vendor_code", e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact_details">Contact details</Label>
+              <Input
+                id="contact_details"
+                value={form.contact_details}
+                onChange={(e) => handleChange("contact_details", e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                value={form.address}
+                onChange={(e) => handleChange("address", e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  handleResetForm();
+                  setIsDialogOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving..." : formMode === "create" ? "Create vendor" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {success && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-emerald-600 text-white px-4 py-3 shadow-lg text-sm">
+          {success}
+        </div>
+      )}
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete vendor</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-medium">{vendorToDelete?.name ?? "this vendor"}</span>? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setVendorToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
