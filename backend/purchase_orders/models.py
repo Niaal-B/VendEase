@@ -5,6 +5,7 @@ from vendors.models import Vendor
 class PurchaseOrder(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('acknowledged', 'Acknowledged'),
         ('completed', 'Completed'),
         ('canceled', 'Canceled'),
     ]
@@ -12,7 +13,8 @@ class PurchaseOrder(models.Model):
     po_number = models.CharField(max_length=50, unique=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='purchase_orders')
     order_date = models.DateTimeField()
-    delivery_date = models.DateTimeField()
+    expected_delivery_date = models.DateTimeField()
+    actual_delivery_date = models.DateTimeField(null=True, blank=True)
     items = JSONField()
     quantity = models.IntegerField()
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
