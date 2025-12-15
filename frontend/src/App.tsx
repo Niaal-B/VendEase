@@ -1,7 +1,8 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { MainLayout } from './components/layout/main-layout';
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { MainLayout } from "./components/layout/main-layout";
+import { AuthGuard } from "./components/layout/auth-guard";
+import { LoginPage } from "./pages/auth/login";
 
-// Create a simple home page
 function Home() {
   return (
     <div className="text-center py-12">
@@ -11,7 +12,6 @@ function Home() {
   );
 }
 
-// Create a simple page component
 function Page({ title }: { title: string }) {
   return (
     <div className="py-4">
@@ -21,15 +21,23 @@ function Page({ title }: { title: string }) {
   );
 }
 
-// Set up the router
 const router = createBrowserRouter([
   {
-    path: '/',
-    element: <MainLayout />,
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    element: <AuthGuard />,
     children: [
-      { path: '/', element: <Home /> },
-      { path: '/vendors', element: <Page title="Vendors" /> },
-      { path: '/purchase-orders', element: <Page title="Purchase Orders" /> },
+      {
+        path: "/",
+        element: <MainLayout />,
+        children: [
+          { path: "/", element: <Home /> },
+          { path: "/vendors", element: <Page title="Vendors" /> },
+          { path: "/purchase-orders", element: <Page title="Purchase Orders" /> },
+        ],
+      },
     ],
   },
 ]);
