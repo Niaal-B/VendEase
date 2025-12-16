@@ -12,8 +12,8 @@ export function MainLayout() {
   };
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b">
-        <div className="container flex h-16 items-center justify-between px-4">
+      <header className="border-b bg-background">
+        <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="hover:opacity-80 transition-opacity">
             <Logo />
           </Link>
@@ -33,7 +33,7 @@ export function MainLayout() {
           </nav>
         </div>
       </header>
-      <main className="flex-1 container py-8">
+      <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
         <Outlet />
       </main>
     </div>
