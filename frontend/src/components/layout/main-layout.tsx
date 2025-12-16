@@ -19,6 +19,9 @@ export function MainLayout() {
           </Link>
           <nav className="flex items-center gap-4">
             <Button variant="ghost" asChild>
+              <Link to="/">Dashboard</Link>
+            </Button>
+            <Button variant="ghost" asChild>
               <Link to="/vendors">Vendors</Link>
             </Button>
             <Button variant="ghost" asChild>
