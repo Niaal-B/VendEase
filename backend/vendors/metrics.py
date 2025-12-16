@@ -21,11 +21,16 @@ def recalc_metrics(vendor: Vendor) -> None:
     ).count()
     on_time_rate = (on_time_count / completed_count * 100) if completed_count else 0.0
 
-    # Quality rating average over completed POs
-    quality_avg = completed.aggregate(avg=Avg("quality_rating"))["avg"] or 0.0
+    # Quality rating average over completed POs (only those with ratings)
+    quality_rated = completed.exclude(quality_rating__isnull=True)
+    quality_avg = quality_rated.aggregate(avg=Avg("quality_rating"))["avg"] or 0.0
 
     # Average response time (hours) between issue and acknowledgment
-    acknowledged = qs.filter(acknowledgment_date__isnull=False)
+    # Only count POs where acknowledgment_date >= issue_date (filter out negative times)
+    acknowledged = qs.filter(
+        acknowledgment_date__isnull=False,
+        acknowledgment_date__gte=F("issue_date")
+    )
     ack_count = acknowledged.count()
     if ack_count:
         diffs = acknowledged.annotate(diff=F("acknowledgment_date") - F("issue_date")).aggregate(

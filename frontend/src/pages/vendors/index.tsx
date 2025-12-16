@@ -176,7 +176,7 @@ export function VendorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="py-3">
             <CardDescription>Total Vendors</CardDescription>
@@ -198,6 +198,15 @@ export function VendorsPage() {
             <CardTitle className="text-2xl">
               {kpis.avgQuality.toFixed(2)}
               <span className="text-sm font-normal text-muted-foreground ml-1">/ 5</span>
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="py-3">
+            <CardDescription>Avg. Response Time</CardDescription>
+            <CardTitle className="text-2xl">
+              {kpis.avgResponse.toFixed(1)}
+              <span className="text-sm font-normal text-muted-foreground ml-1">hrs</span>
             </CardTitle>
           </CardHeader>
         </Card>
@@ -243,6 +252,7 @@ export function VendorsPage() {
                       <th className="px-4 py-2 font-medium">Code</th>
                       <th className="px-4 py-2 font-medium hidden md:table-cell">On-time %</th>
                       <th className="px-4 py-2 font-medium hidden md:table-cell">Quality</th>
+                      <th className="px-4 py-2 font-medium hidden md:table-cell">Response Time</th>
                       <th className="px-4 py-2 font-medium hidden lg:table-cell">Fulfillment %</th>
                       <th className="px-4 py-2 font-medium text-right">Actions</th>
                     </tr>
@@ -266,6 +276,10 @@ export function VendorsPage() {
                         </td>
                         <td className="px-4 py-2 hidden md:table-cell">
                           {vendor.quality_rating_avg.toFixed(2)}
+                        </td>
+                        <td className="px-4 py-2 hidden md:table-cell">
+                          {vendor.average_response_time.toFixed(1)}
+                          <span className="text-xs text-muted-foreground ml-1">hrs</span>
                         </td>
                         <td className="px-4 py-2 hidden lg:table-cell">
                           {vendor.fulfillment_rate.toFixed(1)}%
