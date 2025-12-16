@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -30,29 +31,39 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background to-muted/20">
+      <Card className="w-full max-w-md border-2 shadow-xl">
+        <CardHeader className="text-center space-y-4 pb-6">
+          <div className="flex justify-center">
             <Logo />
           </div>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Access your VendEase dashboard.</CardDescription>
+          <div>
+            <CardTitle className="text-2xl">Welcome back</CardTitle>
+            <CardDescription className="mt-2">
+              Sign in to access your VendEase dashboard
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-sm font-medium">
+                Username
+              </Label>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
                 required
+                className="h-11"
+                placeholder="Enter your username"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium">
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -60,10 +71,16 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
+                className="h-11"
+                placeholder="Enter your password"
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && (
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
+                <p className="text-sm text-destructive font-medium">{error}</p>
+              </div>
+            )}
+            <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>

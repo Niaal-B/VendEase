@@ -22,14 +22,20 @@ export type PurchaseOrderPayload = Omit<
   "id" | "acknowledgment_date"
 >;
 
+import type { PaginatedResponse } from "./vendors";
+
 export interface PurchaseOrderQuery {
   vendor?: number;
+  page?: number;
 }
 
 export async function listPurchaseOrders(params?: PurchaseOrderQuery) {
-  const res = await apiClient.get<PurchaseOrder[]>("/purchase_orders/", {
-    params,
-  });
+  const res = await apiClient.get<PaginatedResponse<PurchaseOrder>>(
+    "/purchase_orders/",
+    {
+      params,
+    }
+  );
   return res.data;
 }
 

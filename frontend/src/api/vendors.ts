@@ -21,8 +21,21 @@ export type VendorPayload = Omit<
   | "fulfillment_rate"
 >;
 
-export async function listVendors() {
-  const res = await apiClient.get<Vendor[]>("/vendors/");
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface ListVendorsParams {
+  page?: number;
+}
+
+export async function listVendors(params?: ListVendorsParams) {
+  const res = await apiClient.get<PaginatedResponse<Vendor>>("/vendors/", {
+    params: params ? { page: params.page } : undefined,
+  });
   return res.data;
 }
 

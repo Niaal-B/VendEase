@@ -20,6 +20,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toast } from "@/components/ui/toast";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +32,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
 
 type FormMode = "create" | "edit";
 
@@ -64,6 +69,8 @@ export function PurchaseOrdersPage() {
   const [ackLoadingId, setAckLoadingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -78,9 +85,14 @@ export function PurchaseOrdersPage() {
       setError(null);
       setSuccess(null);
       try {
-        const [pos, vs] = await Promise.all([listPurchaseOrders(), listVendors()]);
-        setPurchaseOrders(pos);
-        setVendors(vs);
+        const [posData, vsData] = await Promise.all([
+          listPurchaseOrders({ page: currentPage }),
+          listVendors({ page: 1 }), // Get first page of vendors for dropdown
+        ]);
+        setPurchaseOrders(posData.results);
+        setTotalPages(Math.ceil(posData.count / 10));
+        // For vendors dropdown, we'll use the results from paginated response
+        setVendors(vsData.results);
       } catch (err) {
         console.error(err);
         setError("Failed to load purchase orders. Please try again.");
@@ -89,7 +101,7 @@ export function PurchaseOrdersPage() {
       }
     };
     fetchAll();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     if (!success) return;
@@ -239,9 +251,12 @@ export function PurchaseOrdersPage() {
 
     try {
       if (formMode === "create") {
-        const created = await createPurchaseOrder(basePayload);
-        setPurchaseOrders((prev) => [created, ...prev]);
+        await createPurchaseOrder(basePayload);
         setSuccess("Purchase order created successfully.");
+        // Refresh the current page
+        const data = await listPurchaseOrders({ page: currentPage });
+        setPurchaseOrders(data.results);
+        setTotalPages(Math.ceil(data.count / 10));
       } else if (formMode === "edit" && selectedId != null) {
         const updated = await updatePurchaseOrder(selectedId, basePayload);
         setPurchaseOrders((prev) =>
@@ -273,8 +288,15 @@ export function PurchaseOrdersPage() {
       setError(null);
       setSuccess(null);
       await deletePurchaseOrder(poToDelete.id);
-      setPurchaseOrders((prev) => prev.filter((p) => p.id !== poToDelete.id));
       setSuccess("Purchase order deleted successfully.");
+      // Refresh the current page
+      const data = await listPurchaseOrders({ page: currentPage });
+      setPurchaseOrders(data.results);
+      setTotalPages(Math.ceil(data.count / 10));
+      // If current page is empty and not page 1, go to previous page
+      if (data.results.length === 0 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to delete purchase order. Please try again.");
@@ -302,169 +324,244 @@ export function PurchaseOrdersPage() {
     }
   };
 
+  const getStatusBadge = (status: POStatus) => {
+    const variants = {
+      pending: { variant: "warning" as const, label: "Pending" },
+      acknowledged: { variant: "info" as const, label: "Acknowledged" },
+      completed: { variant: "success" as const, label: "Completed" },
+      canceled: { variant: "destructive" as const, label: "Canceled" },
+    };
+    const config = variants[status];
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
+          <p className="text-muted-foreground mt-1">
+            Track purchase orders and vendor performance inputs
+          </p>
+        </div>
+        <Button onClick={openCreateDialog} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add PO
+        </Button>
+      </div>
+
+      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Total POs</CardDescription>
-            <CardTitle className="text-2xl">{kpis.total}</CardTitle>
+        <Card className="border-2 hover:border-primary/50 transition-colors">
+          <CardHeader className="py-4">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Total POs
+            </CardDescription>
+            <CardTitle className="text-3xl font-bold mt-2">{kpis.total}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Completed</CardDescription>
-            <CardTitle className="text-2xl">{kpis.completed}</CardTitle>
+        <Card className="border-2 hover:border-primary/50 transition-colors">
+          <CardHeader className="py-4">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Completed
+            </CardDescription>
+            <CardTitle className="text-3xl font-bold mt-2">{kpis.completed}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Pending</CardDescription>
-            <CardTitle className="text-2xl">{kpis.pending}</CardTitle>
+        <Card className="border-2 hover:border-primary/50 transition-colors">
+          <CardHeader className="py-4">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Pending
+            </CardDescription>
+            <CardTitle className="text-3xl font-bold mt-2">{kpis.pending}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Acknowledged</CardDescription>
-            <CardTitle className="text-2xl">{kpis.acknowledged}</CardTitle>
+        <Card className="border-2 hover:border-primary/50 transition-colors">
+          <CardHeader className="py-4">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">
+              Acknowledged
+            </CardDescription>
+            <CardTitle className="text-3xl font-bold mt-2">{kpis.acknowledged}</CardTitle>
           </CardHeader>
         </Card>
       </div>
 
-      <div className="grid gap-6">
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle>Purchase Orders</CardTitle>
-              <CardDescription>
-                Track purchase orders and vendor performance inputs.
-              </CardDescription>
+      <Card className="border-2 overflow-hidden">
+        <CardHeader className="border-b bg-muted/30">
+          <CardTitle className="text-lg">Purchase Order Directory</CardTitle>
+          <CardDescription>View and manage all purchase orders</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-6 space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              ))}
             </div>
-            <Button size="sm" onClick={openCreateDialog}>
-              + Add PO
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">
-                Loading purchase orders...
+          ) : purchaseOrders.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Plus className="h-6 w-6 text-muted-foreground" />
               </div>
-            ) : purchaseOrders.length === 0 ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">
-                No purchase orders yet. Use “Add PO” to create one.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 border-b">
-                    <tr className="text-left">
-                      <th className="px-4 py-2 font-medium">PO #</th>
-                      <th className="px-4 py-2 font-medium">Vendor</th>
-                      <th className="px-4 py-2 font-medium hidden md:table-cell">
-                        Status
-                      </th>
-                      <th className="px-4 py-2 font-medium hidden md:table-cell">
-                        Expected
-                      </th>
-                      <th className="px-4 py-2 font-medium hidden lg:table-cell">
-                        Quantity
-                      </th>
-                      <th className="px-4 py-2 font-medium hidden lg:table-cell">
-                        Quality
-                      </th>
-                      <th className="px-4 py-2 font-medium text-right">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchaseOrders.map((po) => {
-                      const vendor = vendorMap.get(po.vendor);
-                      return (
-                        <tr
-                          key={po.id}
-                          className="border-b last:border-0 hover:bg-muted/40 cursor-pointer"
-                          onClick={() => openEditDialog(po)}
-                        >
-                          <td className="px-4 py-2 font-medium">{po.po_number}</td>
-                          <td className="px-4 py-2">
-                            <div className="text-sm">
-                              {vendor ? vendor.name : `Vendor #${po.vendor}`}
+              <p className="text-sm font-medium text-foreground mb-1">No purchase orders yet</p>
+              <p className="text-xs text-muted-foreground mb-4">
+                Get started by creating your first purchase order
+              </p>
+              <Button size="sm" onClick={openCreateDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Purchase Order
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 border-b">
+                  <tr className="text-left">
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide">PO #</th>
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide">Vendor</th>
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide hidden md:table-cell">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide hidden md:table-cell">
+                      Expected Delivery
+                    </th>
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide hidden lg:table-cell">
+                      Quantity
+                    </th>
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide hidden lg:table-cell">
+                      Quality
+                    </th>
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchaseOrders.map((po) => {
+                    const vendor = vendorMap.get(po.vendor);
+                    return (
+                      <tr
+                        key={po.id}
+                        className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => openEditDialog(po)}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="font-semibold font-mono">{po.po_number}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium">
+                            {vendor ? vendor.name : `Vendor #${po.vendor}`}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {vendor?.vendor_code}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          {getStatusBadge(po.status)}
+                        </td>
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          <div className="text-sm">
+                            {new Date(po.expected_delivery_date).toLocaleDateString()}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(po.expected_delivery_date).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 hidden lg:table-cell">
+                          <span className="font-medium">{po.quantity}</span>
+                        </td>
+                        <td className="px-6 py-4 hidden lg:table-cell">
+                          {po.quality_rating != null ? (
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{po.quality_rating.toFixed(2)}</span>
+                              <span className="text-xs text-muted-foreground">/ 5.0</span>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {vendor?.vendor_code}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 hidden md:table-cell capitalize">
-                            {po.status}
-                          </td>
-                          <td className="px-4 py-2 hidden md:table-cell">
-                            {new Date(po.expected_delivery_date).toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2 hidden lg:table-cell">
-                            {po.quantity}
-                          </td>
-                          <td className="px-4 py-2 hidden lg:table-cell">
-                            {po.quality_rating != null
-                              ? po.quality_rating.toFixed(2)
-                              : "-"}
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEditDialog(po);
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive"
-                                onClick={(e) => handleDeleteClick(po, e)}
-                              >
-                                Delete
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={
-                                  (po.status !== "pending" &&
-                                    po.status !== "acknowledged") ||
-                                  ackLoadingId === po.id
-                                }
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAcknowledge(po);
-                                }}
-                              >
-                                {ackLoadingId === po.id
-                                  ? "Acknowledging..."
-                                  : po.status === "acknowledged"
-                                  ? "Re-ack"
-                                  : "Acknowledge"}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {error && !loading && (
-              <div className="px-4 py-3 text-sm text-destructive border-t bg-destructive/10">
-                {error}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(po)}
+                              className="gap-1"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                              onClick={(e) => handleDeleteClick(po, e)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={
+                                (po.status !== "pending" && po.status !== "acknowledged") ||
+                                ackLoadingId === po.id
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAcknowledge(po);
+                              }}
+                              className="gap-1"
+                            >
+                              {ackLoadingId === po.id ? (
+                                <>Loading...</>
+                              ) : po.status === "acknowledged" ? (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Re-ack
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Acknowledge
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {error && !loading && (
+            <div className="px-6 py-4 text-sm text-destructive border-t bg-destructive/10">
+              {error}
+            </div>
+          )}
+        </CardContent>
+        {!loading && purchaseOrders.length > 0 && (
+          <div className="border-t px-6 py-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
+          </div>
+        )}
+      </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
@@ -649,11 +746,7 @@ export function PurchaseOrdersPage() {
         </DialogContent>
       </Dialog>
 
-      {success && (
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-emerald-600 text-white px-4 py-3 shadow-lg text-sm">
-          {success}
-        </div>
-      )}
+      {success && <Toast message={success} type="success" onClose={() => setSuccess(null)} />}
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
