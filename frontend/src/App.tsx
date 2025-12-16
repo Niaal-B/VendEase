@@ -8,8 +8,9 @@ import { PurchaseOrdersPage } from "./pages/purchase-orders";
 function Home() {
   return (
     <div className="text-center py-12">
-      <h2 className="text-2xl font-bold mb-4">Welcome to Vendor Management System</h2>
-      <p>Get started by navigating to Vendors or Purchase Orders.</p>
+      <h2 className="text-2xl font-bold mb-4">Welcome to VendEase</h2>
+      <p className="text-muted-foreground">Streamline your vendor management and track performance metrics.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Get started by navigating to Vendors or Purchase Orders.</p>
     </div>
   );
 }

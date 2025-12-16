@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/api/client";
+import { Logo } from "@/components/ui/logo";
 
 export function MainLayout() {
   const navigate = useNavigate();
@@ -13,7 +14,9 @@ export function MainLayout() {
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
         <div className="container flex h-16 items-center justify-between px-4">
-          <h1 className="text-xl font-bold">Vendor Management</h1>
+          <Link to="/" className="hover:opacity-80 transition-opacity">
+            <Logo />
+          </Link>
           <nav className="flex items-center gap-4">
             <Button variant="ghost" asChild>
               <Link to="/vendors">Vendors</Link>

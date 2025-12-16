@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/ui/logo";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -31,9 +32,12 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Logo />
+          </div>
           <CardTitle>Sign in</CardTitle>
-          <CardDescription>Access your Vendor Management dashboard.</CardDescription>
+          <CardDescription>Access your VendEase dashboard.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
