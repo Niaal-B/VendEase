@@ -42,22 +42,30 @@ type ItemPair = {
 };
 
 type PurchaseOrderForm = {
-  vendor: string;          // vendor id as string
+  vendor: string;          
   po_number: string;
+  order_date: string;
   expected_delivery_date: string;
+  actual_delivery_date: string;
   quantity: string;
   status: POStatus;
   quality_rating: string;
+  issue_date: string;
+  acknowledgment_date: string;
   items: ItemPair[];      // Array of key-value pairs
 };
 
 const emptyForm: PurchaseOrderForm = {
   vendor: "",
   po_number: "",
+  order_date: "",
   expected_delivery_date: "",
+  actual_delivery_date: "",
   quantity: "",
   status: "pending",
   quality_rating: "",
+  issue_date: "",
+  acknowledgment_date: "",
   items: [],
 };
 
@@ -144,13 +152,16 @@ export function PurchaseOrdersPage() {
   const openCreateDialog = () => {
     setFormMode("create");
     setSelectedId(null);
+    const now = new Date().toISOString().slice(0, 16);
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 16);
 
     setForm({
       ...emptyForm,
+      order_date: now,
       expected_delivery_date: tomorrow,
+      issue_date: now,
     });
     setIsDialogOpen(true);
   };
@@ -166,10 +177,14 @@ export function PurchaseOrdersPage() {
     setForm({
       vendor: String(po.vendor),
       po_number: po.po_number,
+      order_date: po.order_date ? po.order_date.slice(0, 16) : "",
       expected_delivery_date: po.expected_delivery_date.slice(0, 16),
+      actual_delivery_date: po.actual_delivery_date ? po.actual_delivery_date.slice(0, 16) : "",
       quantity: String(po.quantity),
       status: po.status,
       quality_rating: po.quality_rating != null ? String(po.quality_rating) : "",
+      issue_date: po.issue_date ? po.issue_date.slice(0, 16) : "",
+      acknowledgment_date: po.acknowledgment_date ? po.acknowledgment_date.slice(0, 16) : "",
       items: itemsArray,
     });
     setIsDialogOpen(true);
@@ -230,28 +245,36 @@ export function PurchaseOrdersPage() {
       }
     });
   
-    
-
     const nowIso = new Date().toISOString();
-    const basePayload: PurchaseOrderPayload = {
+    const basePayload: PurchaseOrderPayload & { acknowledgment_date?: string | null } = {
       po_number: form.po_number,
       vendor: Number(form.vendor),
-      order_date: nowIso,
-      expected_delivery_date:
-        form.expected_delivery_date || nowIso,
-      actual_delivery_date: null,
+      order_date: form.order_date
+        ? new Date(form.order_date).toISOString()
+        : nowIso,
+      expected_delivery_date: form.expected_delivery_date
+        ? new Date(form.expected_delivery_date).toISOString()
+        : nowIso,
+      actual_delivery_date: form.actual_delivery_date
+        ? new Date(form.actual_delivery_date).toISOString()
+        : null,
       items: parsedItems,
       quantity: Number(form.quantity) || 0,
       status: form.status,
       quality_rating: form.quality_rating
         ? parseFloat(form.quality_rating)
         : null,
-      issue_date: nowIso,
+      issue_date: form.issue_date
+        ? new Date(form.issue_date).toISOString()
+        : nowIso,
+      acknowledgment_date: form.acknowledgment_date
+        ? new Date(form.acknowledgment_date).toISOString()
+        : null,
     };
 
     try {
       if (formMode === "create") {
-        await createPurchaseOrder(basePayload);
+        await createPurchaseOrder(basePayload as PurchaseOrderPayload);
         setSuccess("Purchase order created successfully.");
         // Refresh the current page
         const data = await listPurchaseOrders({ page: currentPage });
@@ -609,6 +632,29 @@ export function PurchaseOrdersPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
+                <Label htmlFor="order_date">Order date</Label>
+                <Input
+                  id="order_date"
+                  type="datetime-local"
+                  value={form.order_date}
+                  onChange={(e) => handleFieldChange("order_date", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issue_date">Issue date</Label>
+                <Input
+                  id="issue_date"
+                  type="datetime-local"
+                  value={form.issue_date}
+                  onChange={(e) => handleFieldChange("issue_date", e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="expected_delivery_date">Expected delivery</Label>
                 <Input
                   id="expected_delivery_date"
@@ -621,6 +667,22 @@ export function PurchaseOrdersPage() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="actual_delivery_date">
+                  Actual delivery date (optional)
+                </Label>
+                <Input
+                  id="actual_delivery_date"
+                  type="datetime-local"
+                  value={form.actual_delivery_date}
+                  onChange={(e) =>
+                    handleFieldChange("actual_delivery_date", e.target.value)
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="quantity">Quantity</Label>
                 <Input
                   id="quantity"
@@ -629,6 +691,19 @@ export function PurchaseOrdersPage() {
                   value={form.quantity}
                   onChange={(e) => handleFieldChange("quantity", e.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="acknowledgment_date">
+                  Acknowledgment date (optional)
+                </Label>
+                <Input
+                  id="acknowledgment_date"
+                  type="datetime-local"
+                  value={form.acknowledgment_date}
+                  onChange={(e) =>
+                    handleFieldChange("acknowledgment_date", e.target.value)
+                  }
                 />
               </div>
             </div>
