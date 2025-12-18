@@ -1,10 +1,12 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Vendor(models.Model):
     name = models.CharField(max_length=255)
     contact_details = models.TextField()
     address = models.TextField()
     vendor_code = models.CharField(max_length=50, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='vendor_profile', null=True, blank=True)
     on_time_delivery_rate = models.FloatField(default=0.0)
     quality_rating_avg = models.FloatField(default=0.0)
     average_response_time = models.FloatField(default=0.0)
