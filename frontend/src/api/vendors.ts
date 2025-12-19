@@ -53,4 +53,27 @@ export async function deleteVendor(id: number) {
   await apiClient.delete(`/vendors/${id}/`);
 }
 
+export interface VendorRegistrationPayload {
+  username: string;
+  email: string;
+  password: string;
+  password_confirm: string;
+  name: string;
+  contact_details: string;
+  address: string;
+  vendor_code: string;
+}
+
+export interface VendorRegistrationResponse {
+  message: string;
+  vendor: Vendor;
+  access: string;
+  refresh: string;
+}
+
+export async function registerVendor(data: VendorRegistrationPayload) {
+  const res = await apiClient.post<VendorRegistrationResponse>("/vendors/register/", data);
+  return res.data;
+}
+
 

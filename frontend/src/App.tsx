@@ -1,15 +1,23 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { MainLayout } from "./components/layout/main-layout";
+import { VendorLayout } from "./components/layout/vendor-layout";
 import { AuthGuard } from "./components/layout/auth-guard";
 import { LoginPage } from "./pages/auth/login";
+import { RegisterPage } from "./pages/auth/register";
 import { VendorsPage } from "./pages/vendors";
 import { PurchaseOrdersPage } from "./pages/purchase-orders";
 import { DashboardPage } from "./pages/dashboard";
+import { VendorDashboardPage } from "./pages/vendor/dashboard";
+import { VendorPurchaseOrdersPage } from "./pages/vendor/purchase-orders";
 
 const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/register",
+    element: <RegisterPage />,
   },
   {
     element: <AuthGuard />,
@@ -21,6 +29,14 @@ const router = createBrowserRouter([
           { path: "/", element: <DashboardPage /> },
           { path: "/vendors", element: <VendorsPage /> },
           { path: "/purchase-orders", element: <PurchaseOrdersPage /> },
+        ],
+      },
+      {
+        path: "/vendor",
+        element: <VendorLayout />,
+        children: [
+          { path: "/vendor/dashboard", element: <VendorDashboardPage /> },
+          { path: "/vendor/purchase-orders", element: <VendorPurchaseOrdersPage /> },
         ],
       },
     ],
