@@ -75,7 +75,6 @@ class VendorAcknowledgePurchaseOrderView(generics.UpdateAPIView):
     lookup_field = "pk"
     
     def get_queryset(self):
-        # Filter by the logged-in vendor
         vendor = self.request.user.vendor_profile
         return PurchaseOrder.objects.filter(vendor=vendor).select_related("vendor")
     
