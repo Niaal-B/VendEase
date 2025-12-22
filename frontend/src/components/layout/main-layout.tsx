@@ -45,7 +45,7 @@ export function MainLayout() {
                     <Icon className="h-4 w-4" />
                     <span className="hidden sm:inline">{item.label}</span>
                   </Link>
-                </Button>
+            </Button>
               );
             })}
             <div className="ml-2 h-6 w-px bg-border" />
