@@ -30,8 +30,7 @@ class PurchaseOrderAcknowledgeView(generics.UpdateAPIView):
     def post(self, request, *args, **kwargs):
         po = self.get_object()
         if po.acknowledgment_date is None:
-            now = timezone.now()
-            po.acknowledgment_date = max(now, po.issue_date)
+            po.acknowledgment_date = timezone.now()
         po.status = "acknowledged"
         po.save(update_fields=["acknowledgment_date", "status"])
         serializer = self.get_serializer(po)
@@ -81,8 +80,7 @@ class VendorAcknowledgePurchaseOrderView(generics.UpdateAPIView):
     def post(self, request, *args, **kwargs):
         po = self.get_object()
         if po.acknowledgment_date is None:
-            now = timezone.now()
-            po.acknowledgment_date = max(now, po.issue_date)
+            po.acknowledgment_date = timezone.now()
         po.status = "acknowledged"
         po.save(update_fields=["acknowledgment_date", "status"])
         serializer = self.get_serializer(po)
