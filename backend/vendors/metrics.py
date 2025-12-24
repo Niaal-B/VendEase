@@ -16,6 +16,7 @@ def recalc_metrics(vendor: Vendor) -> None:
 
     on_time_count = completed.filter(
         actual_delivery_date__isnull=False,
+        expected_delivery_date__isnull=False,
         actual_delivery_date__lte=F("expected_delivery_date"),
     ).count()
     on_time_rate = (on_time_count / completed_count * 100) if completed_count else 0.0

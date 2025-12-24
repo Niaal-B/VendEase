@@ -28,6 +28,18 @@ class HistoricalPerformanceListView(generics.ListAPIView):
     queryset = HistoricalPerformance.objects.select_related("vendor").all()
     serializer_class = HistoricalPerformanceSerializer
 
+@api_view(['GET'])
+def vendor_profile_view(request):
+    if not hasattr(request.user, 'vendor_profile'):
+        return Response(
+            {'detail': 'User does not have a vendor profile.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    vendor = request.user.vendor_profile
+    serializer = VendorSerializer(vendor)
+    return Response(serializer.data)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def vendor_registration_view(request):

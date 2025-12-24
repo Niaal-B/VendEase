@@ -16,9 +16,23 @@ class PurchaseOrderListCreateView(generics.ListCreateAPIView):
 
 
 class PurchaseOrderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Admin endpoint to retrieve, update, and delete purchase orders.
+    Supports both PUT (full update) and PATCH (partial update).
+    """
     queryset = PurchaseOrder.objects.select_related("vendor").all()
     serializer_class = PurchaseOrderSerializer
     lookup_field = "pk"
+    
+    def perform_update(self, serializer):
+        # Save the updated instance
+        instance = serializer.save()
+        
+        # If status is being changed to 'completed', set actual_delivery_date if not already set
+        if 'status' in serializer.validated_data and instance.status == 'completed':
+            if instance.actual_delivery_date is None:
+                instance.actual_delivery_date = timezone.now()
+                instance.save(update_fields=['actual_delivery_date'])
 
 
 class PurchaseOrderAcknowledgeView(generics.UpdateAPIView):
@@ -37,11 +51,7 @@ class PurchaseOrderAcknowledgeView(generics.UpdateAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# Vendor-specific views
 class VendorPurchaseOrderListView(generics.ListAPIView):
-    """
-    List purchase orders for the authenticated vendor.
-    """
     serializer_class = PurchaseOrderSerializer
     permission_classes = [IsVendorOwner]
     
@@ -51,23 +61,16 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
 
 
 class VendorPurchaseOrderDetailView(generics.RetrieveAPIView):
-    """
-    Retrieve a specific purchase order for the authenticated vendor.
-    """
     serializer_class = PurchaseOrderSerializer
     permission_classes = [IsVendorOwner]
     lookup_field = "pk"
     
     def get_queryset(self):
-        # Filter by the logged-in vendor
         vendor = self.request.user.vendor_profile
         return PurchaseOrder.objects.filter(vendor=vendor).select_related("vendor")
 
 
 class VendorAcknowledgePurchaseOrderView(generics.UpdateAPIView):
-    """
-    Allow vendor to acknowledge their purchase order.
-    """
     serializer_class = PurchaseOrderSerializer
     permission_classes = [IsVendorOwner]
     http_method_names = ["post"]
@@ -79,9 +82,17 @@ class VendorAcknowledgePurchaseOrderView(generics.UpdateAPIView):
     
     def post(self, request, *args, **kwargs):
         po = self.get_object()
+        
         if po.acknowledgment_date is None:
             po.acknowledgment_date = timezone.now()
         po.status = "acknowledged"
-        po.save(update_fields=["acknowledgment_date", "status"])
-        serializer = self.get_serializer(po)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        update_fields = ["acknowledgment_date", "status"]
+        if 'expected_delivery_date' in request.data:
+            serializer = self.get_serializer(po, data={'expected_delivery_date': request.data['expected_delivery_date']}, partial=True)
+            if serializer.is_valid():
+                po.expected_delivery_date = serializer.validated_data.get('expected_delivery_date')
+                update_fields.append("expected_delivery_date")
+        
+        po.save(update_fields=update_fields)
+        return Response(self.get_serializer(po).data, status=status.HTTP_200_OK)

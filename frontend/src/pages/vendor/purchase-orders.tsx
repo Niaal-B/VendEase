@@ -26,6 +26,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { CheckCircle2, Package, Clock } from "lucide-react";
 
 function getStatusBadge(status: POStatus) {
@@ -49,6 +50,9 @@ export function VendorPurchaseOrdersPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isAckDialogOpen, setIsAckDialogOpen] = useState(false);
+  const [poToAcknowledge, setPoToAcknowledge] = useState<PurchaseOrder | null>(null);
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,18 +80,36 @@ export function VendorPurchaseOrdersPage() {
     return () => clearTimeout(id);
   }, [success]);
 
-  const handleAcknowledge = async (id: number) => {
-    setAckLoadingId(id);
+  const handleAcknowledgeClick = (po: PurchaseOrder) => {
+    setPoToAcknowledge(po);
+    // Set default to 7 days from now if no expected_delivery_date exists
+    const defaultDate = po.expected_delivery_date
+      ? new Date(po.expected_delivery_date).toISOString().slice(0, 16)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+    setExpectedDeliveryDate(defaultDate);
+    setIsAckDialogOpen(true);
+  };
+
+  const handleAcknowledge = async () => {
+    if (!poToAcknowledge) return;
+    
+    setAckLoadingId(poToAcknowledge.id);
     setError(null);
     try {
-      const updated = await acknowledgeVendorPurchaseOrder(id);
+      const updated = await acknowledgeVendorPurchaseOrder(
+        poToAcknowledge.id,
+        expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : undefined
+      );
       setPurchaseOrders((prev) =>
-        prev.map((po) => (po.id === id ? updated : po))
+        prev.map((po) => (po.id === poToAcknowledge.id ? updated : po))
       );
       setSuccess("Purchase order acknowledged successfully!");
-      if (selectedPO?.id === id) {
+      if (selectedPO?.id === poToAcknowledge.id) {
         setSelectedPO(updated);
       }
+      setIsAckDialogOpen(false);
+      setPoToAcknowledge(null);
+      setExpectedDeliveryDate("");
     } catch (err) {
       console.error(err);
       setError("Failed to acknowledge purchase order. Please try again.");
@@ -199,7 +221,9 @@ export function VendorPurchaseOrdersPage() {
                         </p>
                         <p>
                           Expected Delivery:{" "}
-                          {new Date(po.expected_delivery_date).toLocaleDateString()}
+                          {po.expected_delivery_date
+                            ? new Date(po.expected_delivery_date).toLocaleDateString()
+                            : "Not set"}
                         </p>
                         <p>Quantity: {po.quantity}</p>
                       </div>
@@ -216,7 +240,7 @@ export function VendorPurchaseOrdersPage() {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => handleAcknowledge(po.id)}
+                          onClick={() => handleAcknowledgeClick(po)}
                           disabled={ackLoadingId === po.id}
                         >
                           {ackLoadingId === po.id ? (
@@ -297,7 +321,9 @@ export function VendorPurchaseOrdersPage() {
                     Expected Delivery
                   </Label>
                   <p>
-                    {new Date(selectedPO.expected_delivery_date).toLocaleDateString()}
+                    {selectedPO.expected_delivery_date
+                      ? new Date(selectedPO.expected_delivery_date).toLocaleDateString()
+                      : "Not set"}
                   </p>
                 </div>
                 {selectedPO.actual_delivery_date && (
@@ -351,19 +377,13 @@ export function VendorPurchaseOrdersPage() {
             {selectedPO && selectedPO.status === "pending" && (
               <Button
                 onClick={() => {
-                  handleAcknowledge(selectedPO.id);
                   setIsDetailDialogOpen(false);
+                  handleAcknowledgeClick(selectedPO);
                 }}
                 disabled={ackLoadingId === selectedPO.id}
               >
-                {ackLoadingId === selectedPO.id ? (
-                  "Acknowledging..."
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Acknowledge Order
-                  </>
-                )}
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Acknowledge Order
               </Button>
             )}
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
@@ -387,6 +407,62 @@ export function VendorPurchaseOrdersPage() {
           onClose={() => setSuccess(null)}
         />
       )}
+
+      {/* Acknowledgment Dialog */}
+      <Dialog open={isAckDialogOpen} onOpenChange={setIsAckDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Acknowledge Purchase Order</DialogTitle>
+            <DialogDescription>
+              Please set the expected delivery date for this purchase order.
+            </DialogDescription>
+          </DialogHeader>
+          {poToAcknowledge && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="expected_delivery_date">
+                  Expected Delivery Date <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="expected_delivery_date"
+                  type="datetime-local"
+                  value={expectedDeliveryDate}
+                  onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                  required
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Select when you expect to deliver this order.
+                </p>
+              </div>
+              <div className="rounded-md border p-3 bg-muted/50">
+                <p className="text-sm font-medium mb-1">PO Number: {poToAcknowledge.po_number}</p>
+                <p className="text-sm text-muted-foreground">
+                  Quantity: {poToAcknowledge.quantity}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAckDialogOpen(false);
+                setPoToAcknowledge(null);
+                setExpectedDeliveryDate("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAcknowledge}
+              disabled={!expectedDeliveryDate || ackLoadingId !== null}
+            >
+              {ackLoadingId ? "Acknowledging..." : "Confirm Acknowledgment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "@/api/client";
+import { isVendor } from "@/utils/userRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,14 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(username, password);
-      navigate("/");
+      // Check if user is a vendor and redirect accordingly
+      try {
+        const vendor = await isVendor();
+        navigate(vendor ? "/vendor/dashboard" : "/");
+      } catch {
+        // If check fails, default to admin dashboard
+        navigate("/");
+      }
     } catch (err) {
       console.error(err);
       setError("Invalid credentials. Please try again.");

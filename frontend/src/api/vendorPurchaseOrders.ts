@@ -19,9 +19,13 @@ export async function getVendorPurchaseOrder(id: number) {
   return res.data;
 }
 
-export async function acknowledgeVendorPurchaseOrder(id: number) {
+export async function acknowledgeVendorPurchaseOrder(
+  id: number,
+  expected_delivery_date?: string
+) {
   const res = await apiClient.post<PurchaseOrder>(
-    `/vendor/purchase_orders/${id}/acknowledge/`
+    `/vendor/purchase_orders/${id}/acknowledge/`,
+    expected_delivery_date ? { expected_delivery_date } : undefined
   );
   return res.data;
 }

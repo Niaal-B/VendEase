@@ -32,7 +32,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, Star } from "lucide-react";
 
 type FormMode = "create" | "edit";
 
@@ -52,7 +52,7 @@ type PurchaseOrderForm = {
   quality_rating: string;
   issue_date: string;
   acknowledgment_date: string;
-  items: ItemPair[];      // Array of key-value pairs
+  items: ItemPair[];      
 };
 
 const emptyForm: PurchaseOrderForm = {
@@ -86,6 +86,10 @@ export function PurchaseOrdersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
+  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [poToRate, setPoToRate] = useState<PurchaseOrder | null>(null);
+  const [ratingValue, setRatingValue] = useState<string>("");
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -95,11 +99,10 @@ export function PurchaseOrdersPage() {
       try {
         const [posData, vsData] = await Promise.all([
           listPurchaseOrders({ page: currentPage }),
-          listVendors({ page: 1 }), // Get first page of vendors for dropdown
+          listVendors({ page: 1 }), 
         ]);
         setPurchaseOrders(posData.results);
         setTotalPages(Math.ceil(posData.count / 10));
-        // For vendors dropdown, we'll use the results from paginated response
         setVendors(vsData.results);
       } catch (err) {
         console.error(err);
@@ -152,16 +155,9 @@ export function PurchaseOrdersPage() {
   const openCreateDialog = () => {
     setFormMode("create");
     setSelectedId(null);
-    const now = new Date().toISOString().slice(0, 16);
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 16);
-
     setForm({
       ...emptyForm,
-      order_date: now,
-      expected_delivery_date: tomorrow,
-      issue_date: now,
+      expected_delivery_date: "",
     });
     setIsDialogOpen(true);
   };
@@ -178,7 +174,7 @@ export function PurchaseOrdersPage() {
       vendor: String(po.vendor),
       po_number: po.po_number,
       order_date: po.order_date ? po.order_date.slice(0, 16) : "",
-      expected_delivery_date: po.expected_delivery_date.slice(0, 16),
+      expected_delivery_date: po.expected_delivery_date ? po.expected_delivery_date.slice(0, 16) : "",
       actual_delivery_date: po.actual_delivery_date ? po.actual_delivery_date.slice(0, 16) : "",
       quantity: String(po.quantity),
       status: po.status,
@@ -246,37 +242,46 @@ export function PurchaseOrdersPage() {
     });
   
     const nowIso = new Date().toISOString();
-    const basePayload: PurchaseOrderPayload & { acknowledgment_date?: string | null } = {
+    
+
+    const basePayload: PurchaseOrderPayload & { expected_delivery_date?: string | null } = {
       po_number: form.po_number,
       vendor: Number(form.vendor),
-      order_date: form.order_date
-        ? new Date(form.order_date).toISOString()
-        : nowIso,
-      expected_delivery_date: form.expected_delivery_date
-        ? new Date(form.expected_delivery_date).toISOString()
-        : nowIso,
-      actual_delivery_date: form.actual_delivery_date
-        ? new Date(form.actual_delivery_date).toISOString()
-        : null,
       items: parsedItems,
       quantity: Number(form.quantity) || 0,
-      status: form.status,
-      quality_rating: form.quality_rating
-        ? parseFloat(form.quality_rating)
-        : null,
-      issue_date: form.issue_date
-        ? new Date(form.issue_date).toISOString()
-        : nowIso,
-      acknowledgment_date: form.acknowledgment_date
-        ? new Date(form.acknowledgment_date).toISOString()
-        : null,
+      ...(formMode === "edit"
+        ? {
+            order_date: form.order_date
+              ? new Date(form.order_date).toISOString()
+              : nowIso,
+            issue_date: form.issue_date
+              ? new Date(form.issue_date).toISOString()
+              : nowIso,
+            status: form.status,
+            expected_delivery_date: form.expected_delivery_date
+              ? new Date(form.expected_delivery_date).toISOString()
+              : null,
+            actual_delivery_date: form.actual_delivery_date
+              ? new Date(form.actual_delivery_date).toISOString()
+              : null,
+            quality_rating: form.quality_rating
+              ? parseFloat(form.quality_rating)
+              : null,
+          }
+        : {
+            order_date: nowIso,
+            issue_date: nowIso,
+            status: "pending" as POStatus,
+            expected_delivery_date: null,
+            actual_delivery_date: null,
+            quality_rating: null,
+          }),
     };
 
     try {
       if (formMode === "create") {
         await createPurchaseOrder(basePayload as PurchaseOrderPayload);
         setSuccess("Purchase order created successfully.");
-        // Refresh the current page
         const data = await listPurchaseOrders({ page: currentPage });
         setPurchaseOrders(data.results);
         setTotalPages(Math.ceil(data.count / 10));
@@ -344,6 +349,45 @@ export function PurchaseOrdersPage() {
       setError("Failed to acknowledge purchase order.");
     } finally {
       setAckLoadingId(null);
+    }
+  };
+
+  const handleRateQualityClick = (po: PurchaseOrder, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setPoToRate(po);
+    setRatingValue(po.quality_rating != null ? String(po.quality_rating) : "");
+    setIsRatingDialogOpen(true);
+  };
+
+  const handleUpdateRating = async () => {
+    if (!poToRate) return;
+    
+    setRatingLoading(true);
+    setError(null);
+    try {
+      const rating = ratingValue.trim() ? parseFloat(ratingValue) : null;
+      if (rating !== null && (isNaN(rating) || rating < 0 || rating > 5)) {
+        setError("Rating must be a number between 0 and 5");
+        setRatingLoading(false);
+        return;
+      }
+      
+      const updated = await updatePurchaseOrder(poToRate.id, {
+        quality_rating: rating,
+      } as Partial<PurchaseOrderPayload>);
+      
+      setPurchaseOrders((prev) =>
+        prev.map((po) => (po.id === updated.id ? updated : po))
+      );
+      setSuccess("Quality rating updated successfully!");
+      setIsRatingDialogOpen(false);
+      setPoToRate(null);
+      setRatingValue("");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update quality rating. Please try again.");
+    } finally {
+      setRatingLoading(false);
     }
   };
 
@@ -560,6 +604,17 @@ export function PurchaseOrdersPage() {
                                 </>
                               )}
                             </Button>
+                            {po.status === "completed" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => handleRateQualityClick(po, e)}
+                                className="gap-1"
+                              >
+                                <Star className="h-3.5 w-3.5" />
+                                Rate
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -630,55 +685,64 @@ export function PurchaseOrdersPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="order_date">Order date</Label>
-                <Input
-                  id="order_date"
-                  type="datetime-local"
-                  value={form.order_date}
-                  onChange={(e) => handleFieldChange("order_date", e.target.value)}
-                  required
-                />
+            {/* Show order_date and issue_date only in edit mode */}
+            {formMode === "edit" && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="order_date">Order date</Label>
+                  <Input
+                    id="order_date"
+                    type="datetime-local"
+                    value={form.order_date}
+                    onChange={(e) => handleFieldChange("order_date", e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="issue_date">Issue date</Label>
+                  <Input
+                    id="issue_date"
+                    type="datetime-local"
+                    value={form.issue_date}
+                    onChange={(e) => handleFieldChange("issue_date", e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="issue_date">Issue date</Label>
-                <Input
-                  id="issue_date"
-                  type="datetime-local"
-                  value={form.issue_date}
-                  onChange={(e) => handleFieldChange("issue_date", e.target.value)}
-                  required
-                />
-              </div>
-            </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="expected_delivery_date">Expected delivery</Label>
-                <Input
-                  id="expected_delivery_date"
-                  type="datetime-local"
-                  value={form.expected_delivery_date}
-                  onChange={(e) =>
-                    handleFieldChange("expected_delivery_date", e.target.value)
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="actual_delivery_date">
-                  Actual delivery date (optional)
-                </Label>
-                <Input
-                  id="actual_delivery_date"
-                  type="datetime-local"
-                  value={form.actual_delivery_date}
-                  onChange={(e) =>
-                    handleFieldChange("actual_delivery_date", e.target.value)
-                  }
-                />
-              </div>
+              {/* Show expected_delivery_date only in edit mode */}
+              {formMode === "edit" && (
+                <div className="space-y-2">
+                  <Label htmlFor="expected_delivery_date">Expected delivery</Label>
+                  <Input
+                    id="expected_delivery_date"
+                    type="datetime-local"
+                    value={form.expected_delivery_date}
+                    onChange={(e) =>
+                      handleFieldChange("expected_delivery_date", e.target.value)
+                    }
+                    required
+                  />
+                </div>
+              )}
+              {/* Show actual_delivery_date only in edit mode */}
+              {formMode === "edit" && (
+                <div className="space-y-2">
+                  <Label htmlFor="actual_delivery_date">
+                    Actual delivery date (optional)
+                  </Label>
+                  <Input
+                    id="actual_delivery_date"
+                    type="datetime-local"
+                    value={form.actual_delivery_date}
+                    onChange={(e) =>
+                      handleFieldChange("actual_delivery_date", e.target.value)
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -693,22 +757,10 @@ export function PurchaseOrdersPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="acknowledgment_date">
-                  Acknowledgment date (optional)
-                </Label>
-                <Input
-                  id="acknowledgment_date"
-                  type="datetime-local"
-                  value={form.acknowledgment_date}
-                  onChange={(e) =>
-                    handleFieldChange("acknowledgment_date", e.target.value)
-                  }
-                />
-              </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            {/* Show status only in edit mode */}
+            {formMode === "edit" && (
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <select
@@ -726,23 +778,8 @@ export function PurchaseOrdersPage() {
                   <option value="canceled">Canceled</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="quality_rating">
-                  Quality rating (optional, 0–5)
-                </Label>
-                <Input
-                  id="quality_rating"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  max={5}
-                  value={form.quality_rating}
-                  onChange={(e) =>
-                    handleFieldChange("quality_rating", e.target.value)
-                  }
-                />
-              </div>
-            </div>
+            )}
+
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -848,6 +885,69 @@ export function PurchaseOrdersPage() {
             </Button>
             <Button type="button" variant="destructive" onClick={handleDelete}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rating Dialog */}
+      <Dialog open={isRatingDialogOpen} onOpenChange={setIsRatingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rate Quality</DialogTitle>
+            <DialogDescription>
+              Set the quality rating for{" "}
+              <span className="font-medium">
+                {poToRate?.po_number ?? "this purchase order"}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          {poToRate && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="quality_rating">
+                  Quality Rating (0-5)
+                </Label>
+                <Input
+                  id="quality_rating"
+                  type="number"
+                  step="0.1"
+                  min={0}
+                  max={5}
+                  value={ratingValue}
+                  onChange={(e) => setRatingValue(e.target.value)}
+                  placeholder="Enter rating (e.g., 4.5)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to remove the rating
+                </p>
+              </div>
+              {error && (
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
+                  <p className="text-sm text-destructive font-medium">{error}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setIsRatingDialogOpen(false);
+                setPoToRate(null);
+                setRatingValue("");
+                setError(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleUpdateRating}
+              disabled={ratingLoading}
+            >
+              {ratingLoading ? "Updating..." : "Update Rating"}
             </Button>
           </DialogFooter>
         </DialogContent>

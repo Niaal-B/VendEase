@@ -2,6 +2,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { MainLayout } from "./components/layout/main-layout";
 import { VendorLayout } from "./components/layout/vendor-layout";
 import { AuthGuard } from "./components/layout/auth-guard";
+import { AdminGuard } from "./components/layout/admin-guard";
+import { VendorGuard } from "./components/layout/vendor-guard";
 import { LoginPage } from "./pages/auth/login";
 import { RegisterPage } from "./pages/auth/register";
 import { VendorsPage } from "./pages/vendors";
@@ -23,20 +25,30 @@ const router = createBrowserRouter([
     element: <AuthGuard />,
     children: [
       {
-        path: "/",
-        element: <MainLayout />,
+        element: <AdminGuard />,
         children: [
-          { path: "/", element: <DashboardPage /> },
-          { path: "/vendors", element: <VendorsPage /> },
-          { path: "/purchase-orders", element: <PurchaseOrdersPage /> },
+          {
+            path: "/",
+            element: <MainLayout />,
+            children: [
+              { path: "/", element: <DashboardPage /> },
+              { path: "/vendors", element: <VendorsPage /> },
+              { path: "/purchase-orders", element: <PurchaseOrdersPage /> },
+            ],
+          },
         ],
       },
       {
-        path: "/vendor",
-        element: <VendorLayout />,
+        element: <VendorGuard />,
         children: [
-          { path: "/vendor/dashboard", element: <VendorDashboardPage /> },
-          { path: "/vendor/purchase-orders", element: <VendorPurchaseOrdersPage /> },
+          {
+            path: "/vendor",
+            element: <VendorLayout />,
+            children: [
+              { path: "/vendor/dashboard", element: <VendorDashboardPage /> },
+              { path: "/vendor/purchase-orders", element: <VendorPurchaseOrdersPage /> },
+            ],
+          },
         ],
       },
     ],

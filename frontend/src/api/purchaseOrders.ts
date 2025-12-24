@@ -53,7 +53,7 @@ export async function updatePurchaseOrder(
   id: number,
   data: Partial<PurchaseOrderPayload>,
 ) {
-  const res = await apiClient.put<PurchaseOrder>(
+  const res = await apiClient.patch<PurchaseOrder>(
     `/purchase_orders/${id}/`,
     data,
   );
