@@ -83,6 +83,7 @@ export function PurchaseOrdersPage() {
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [form, setForm] = useState<PurchaseOrderForm>(emptyForm);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
@@ -153,18 +154,15 @@ export function PurchaseOrdersPage() {
   }, [purchaseOrders]);
 
   const openCreateDialog = () => {
-    setFormMode("create");
-    setSelectedId(null);
-    setForm({
-      ...emptyForm,
-      expected_delivery_date: "",
-    });
+    resetForm();
+    setFieldErrors({});
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (po: PurchaseOrder) => {
     setFormMode("edit");
     setSelectedId(po.id);
+    setFieldErrors({});
     const itemsObj = po.items ?? {};
     const itemsArray: ItemPair[] = Object.entries(itemsObj).map(([key, value]) => ({
       key,
@@ -190,10 +188,233 @@ export function PurchaseOrdersPage() {
     setFormMode("create");
     setSelectedId(null);
     setForm(emptyForm);
+    setFieldErrors({});
+  };
+
+  // Validation functions
+  const validateVendor = (value: string): string | null => {
+    if (!value || value.trim() === "") {
+      return "Vendor is required";
+    }
+    return null;
+  };
+
+  const validatePONumber = (value: string): string | null => {
+    if (!value || value.trim() === "") {
+      return "PO number is required";
+    }
+    if (value.length > 50) {
+      return "PO number must be 50 characters or less";
+    }
+    return null;
+  };
+
+  const validateQuantity = (value: string): string | null => {
+    if (!value || value.trim() === "") {
+      return "Quantity is required";
+    }
+    const numValue = Number(value);
+    if (isNaN(numValue)) {
+      return "Quantity must be a valid number";
+    }
+    if (numValue < 0) {
+      return "Quantity must be 0 or greater";
+    }
+    if (!Number.isInteger(numValue)) {
+      return "Quantity must be a whole number";
+    }
+    return null;
+  };
+
+  const validateDate = (value: string, fieldName: string, required: boolean = false): string | null => {
+    if (!value || value.trim() === "") {
+      if (required) {
+        return `${fieldName} is required`;
+      }
+      return null;
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return `Please enter a valid ${fieldName.toLowerCase()}`;
+    }
+    return null;
+  };
+
+  const validateOrderDate = (value: string, mode: FormMode): string | null => {
+    if (mode === "edit") {
+      return validateDate(value, "Order date", true);
+    }
+    return null;
+  };
+
+  const validateIssueDate = (value: string, mode: FormMode): string | null => {
+    if (mode === "edit") {
+      return validateDate(value, "Issue date", true);
+    }
+    return null;
+  };
+
+  const validateExpectedDeliveryDate = (value: string, mode: FormMode, issueDate: string): string | null => {
+    if (mode === "edit") {
+      const dateError = validateDate(value, "Expected delivery date", true);
+      if (dateError) return dateError;
+      
+      // Validate that expected delivery date is after issue date
+      if (value && issueDate) {
+        const expected = new Date(value);
+        const issue = new Date(issueDate);
+        if (expected <= issue) {
+          return "Expected delivery date must be after issue date";
+        }
+      }
+    }
+    return null;
+  };
+
+  const validateActualDeliveryDate = (value: string, expectedDate?: string): string | null => {
+    if (!value || value.trim() === "") {
+      return null; // Optional field
+    }
+    const dateError = validateDate(value, "Actual delivery date", false);
+    if (dateError) return dateError;
+    
+    // If expected date exists, validate that actual is not too far in the future compared to expected
+    if (expectedDate && value) {
+      const actual = new Date(value);
+      const expected = new Date(expectedDate);
+      const diffDays = (actual.getTime() - expected.getTime()) / (1000 * 60 * 60 * 24);
+      if (diffDays > 365) {
+        return "Actual delivery date seems too far in the future";
+      }
+    }
+    return null;
+  };
+
+  const validateQualityRating = (value: string): string | null => {
+    if (!value || value.trim() === "") {
+      return null; // Optional field
+    }
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+      return "Quality rating must be a valid number";
+    }
+    if (numValue < 0 || numValue > 5) {
+      return "Quality rating must be between 0 and 5";
+    }
+    return null;
+  };
+
+  const validateItems = (items: ItemPair[]): string | null => {
+    const seenKeys = new Set<string>();
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      // If key is provided, value should also be provided
+      if (item.key.trim() && !item.value.trim()) {
+        return `Item ${i + 1}: Value is required when key is provided`;
+      }
+      // If value is provided, key should also be provided
+      if (item.value.trim() && !item.key.trim()) {
+        return `Item ${i + 1}: Key is required when value is provided`;
+      }
+      // Check for duplicate keys
+      if (item.key.trim()) {
+        const normalizedKey = item.key.trim().toLowerCase();
+        if (seenKeys.has(normalizedKey)) {
+          return `Item ${i + 1}: Duplicate key "${item.key.trim()}"`;
+        }
+        seenKeys.add(normalizedKey);
+      }
+    }
+    return null;
+  };
+
+  // Validate a single field
+  const validateField = (field: keyof PurchaseOrderForm, value: string | ItemPair[]): string | null => {
+    switch (field) {
+      case "vendor":
+        return validateVendor(typeof value === 'string' ? value : '');
+      case "po_number":
+        return validatePONumber(typeof value === 'string' ? value : '');
+      case "quantity":
+        return validateQuantity(typeof value === 'string' ? value : '');
+      case "order_date":
+        return validateOrderDate(typeof value === 'string' ? value : '', formMode);
+      case "issue_date":
+        return validateIssueDate(typeof value === 'string' ? value : '', formMode);
+      case "expected_delivery_date":
+        return validateExpectedDeliveryDate(typeof value === 'string' ? value : '', formMode, form.issue_date);
+      case "actual_delivery_date":
+        return validateActualDeliveryDate(typeof value === 'string' ? value : '', form.expected_delivery_date);
+      case "quality_rating":
+        return validateQualityRating(typeof value === 'string' ? value : '');
+      case "items":
+        return validateItems(Array.isArray(value) ? value : []);
+      default:
+        return null;
+    }
+  };
+
+  // Validate all fields
+  const validateAllFields = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    const vendorError = validateField("vendor", form.vendor);
+    if (vendorError) errors.vendor = vendorError;
+
+    const poNumberError = validateField("po_number", form.po_number);
+    if (poNumberError) errors.po_number = poNumberError;
+
+    const quantityError = validateField("quantity", form.quantity);
+    if (quantityError) errors.quantity = quantityError;
+
+    if (formMode === "edit") {
+      const orderDateError = validateField("order_date", form.order_date);
+      if (orderDateError) errors.order_date = orderDateError;
+
+      const issueDateError = validateField("issue_date", form.issue_date);
+      if (issueDateError) errors.issue_date = issueDateError;
+
+      const expectedDeliveryError = validateField("expected_delivery_date", form.expected_delivery_date);
+      if (expectedDeliveryError) errors.expected_delivery_date = expectedDeliveryError;
+    }
+
+    const actualDeliveryError = validateField("actual_delivery_date", form.actual_delivery_date);
+    if (actualDeliveryError) errors.actual_delivery_date = actualDeliveryError;
+
+    const qualityRatingError = validateField("quality_rating", form.quality_rating);
+    if (qualityRatingError) errors.quality_rating = qualityRatingError;
+
+    const itemsError = validateField("items", form.items);
+    if (itemsError) errors.items = itemsError;
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleFieldChange = (field: keyof PurchaseOrderForm, value: string | ItemPair[]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    // Clear field error when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleFieldBlur = (field: keyof PurchaseOrderForm) => {
+    const value = form[field];
+    const error = validateField(field, value);
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    } else {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
 
   const handleAddItem = () => {
@@ -217,6 +438,14 @@ export function PurchaseOrdersPage() {
         i === index ? { ...item, [field]: value } : item
       ),
     }));
+    // Clear items error when user starts typing
+    if (fieldErrors.items) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.items;
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,8 +454,9 @@ export function PurchaseOrdersPage() {
     setError(null);
     setSuccess(null);
   
-    if (!form.vendor) {
-      setError("Vendor is required.");
+    // Validate all fields before submission
+    if (!validateAllFields()) {
+      setError("Please fix the errors in the form before submitting.");
       setSubmitting(false);
       return;
     }
@@ -242,51 +472,50 @@ export function PurchaseOrdersPage() {
     });
   
     const nowIso = new Date().toISOString();
-    
-
-    const basePayload: PurchaseOrderPayload & { expected_delivery_date?: string | null } = {
-      po_number: form.po_number,
-      vendor: Number(form.vendor),
-      items: parsedItems,
-      quantity: Number(form.quantity) || 0,
-      ...(formMode === "edit"
-        ? {
-            order_date: form.order_date
-              ? new Date(form.order_date).toISOString()
-              : nowIso,
-            issue_date: form.issue_date
-              ? new Date(form.issue_date).toISOString()
-              : nowIso,
-            status: form.status,
-            expected_delivery_date: form.expected_delivery_date
-              ? new Date(form.expected_delivery_date).toISOString()
-              : null,
-            actual_delivery_date: form.actual_delivery_date
-              ? new Date(form.actual_delivery_date).toISOString()
-              : null,
-            quality_rating: form.quality_rating
-              ? parseFloat(form.quality_rating)
-              : null,
-          }
-        : {
-            order_date: nowIso,
-            issue_date: nowIso,
-            status: "pending" as POStatus,
-            expected_delivery_date: null,
-            actual_delivery_date: null,
-            quality_rating: null,
-          }),
-    };
 
     try {
       if (formMode === "create") {
-        await createPurchaseOrder(basePayload as PurchaseOrderPayload);
+        const createPayload: PurchaseOrderPayload = {
+          po_number: form.po_number,
+          vendor: Number(form.vendor),
+          items: parsedItems,
+          quantity: Number(form.quantity) || 0,
+          order_date: nowIso,
+          issue_date: nowIso,
+          status: "pending" as POStatus,
+          expected_delivery_date: nowIso, // Will be updated by vendor when acknowledging
+          actual_delivery_date: null,
+          quality_rating: null,
+        };
+        await createPurchaseOrder(createPayload);
         setSuccess("Purchase order created successfully.");
         const data = await listPurchaseOrders({ page: currentPage });
         setPurchaseOrders(data.results);
         setTotalPages(Math.ceil(data.count / 10));
       } else if (formMode === "edit" && selectedId != null) {
-        const updated = await updatePurchaseOrder(selectedId, basePayload);
+        const updatePayload: Partial<PurchaseOrderPayload> = {
+          po_number: form.po_number,
+          vendor: Number(form.vendor),
+          items: parsedItems,
+          quantity: Number(form.quantity) || 0,
+          order_date: form.order_date
+            ? new Date(form.order_date).toISOString()
+            : nowIso,
+          issue_date: form.issue_date
+            ? new Date(form.issue_date).toISOString()
+            : nowIso,
+          status: form.status,
+          expected_delivery_date: form.expected_delivery_date
+            ? new Date(form.expected_delivery_date).toISOString()
+            : undefined,
+          actual_delivery_date: form.actual_delivery_date
+            ? new Date(form.actual_delivery_date).toISOString()
+            : null,
+          quality_rating: form.quality_rating
+            ? parseFloat(form.quality_rating)
+            : null,
+        };
+        const updated = await updatePurchaseOrder(selectedId, updatePayload);
         setPurchaseOrders((prev) =>
           prev.map((po) => (po.id === updated.id ? updated : po)),
         );
@@ -294,11 +523,37 @@ export function PurchaseOrdersPage() {
       }
       resetForm();
       setIsDialogOpen(false);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(
-        "Failed to save purchase order. Please check the data and try again.",
-      );
+      
+      // Handle field-specific errors from API
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { data?: unknown } };
+        const errorData = axiosError.response?.data;
+        
+        if (errorData && typeof errorData === 'object' && !('message' in errorData) && !('detail' in errorData)) {
+          const errors: Record<string, string> = {};
+          Object.keys(errorData).forEach((key) => {
+            const errorValue = (errorData as Record<string, unknown>)[key];
+            if (Array.isArray(errorValue)) {
+              errors[key] = String(errorValue[0]);
+            } else if (typeof errorValue === 'string') {
+              errors[key] = errorValue;
+            }
+          });
+          setFieldErrors(errors);
+          setError("Please fix the errors in the form before submitting.");
+        } else if (errorData && typeof errorData === 'object') {
+          const message = 'message' in errorData ? String(errorData.message) : 
+                         'detail' in errorData ? String(errorData.detail) : 
+                         "Failed to save purchase order. Please check the data and try again.";
+          setError(message);
+        } else {
+          setError("Failed to save purchase order. Please check the data and try again.");
+        }
+      } else {
+        setError("Failed to save purchase order. Please check the data and try again.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -661,9 +916,12 @@ export function PurchaseOrdersPage() {
                 <Label htmlFor="vendor">Vendor</Label>
                 <select
                   id="vendor"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  className={`flex h-9 w-full rounded-md border ${
+                    fieldErrors.vendor ? "border-destructive" : "border-input"
+                  } bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50`}
                   value={form.vendor}
                   onChange={(e) => handleFieldChange("vendor", e.target.value)}
+                  onBlur={() => handleFieldBlur("vendor")}
                   required
                 >
                   <option value="">Select vendor</option>
@@ -673,6 +931,9 @@ export function PurchaseOrdersPage() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.vendor && (
+                  <p className="text-xs text-destructive">{fieldErrors.vendor}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="po_number">PO number</Label>
@@ -680,8 +941,13 @@ export function PurchaseOrdersPage() {
                   id="po_number"
                   value={form.po_number}
                   onChange={(e) => handleFieldChange("po_number", e.target.value)}
+                  onBlur={() => handleFieldBlur("po_number")}
+                  className={fieldErrors.po_number ? "border-destructive" : ""}
                   required
                 />
+                {fieldErrors.po_number && (
+                  <p className="text-xs text-destructive">{fieldErrors.po_number}</p>
+                )}
               </div>
             </div>
 
@@ -695,8 +961,13 @@ export function PurchaseOrdersPage() {
                     type="datetime-local"
                     value={form.order_date}
                     onChange={(e) => handleFieldChange("order_date", e.target.value)}
+                    onBlur={() => handleFieldBlur("order_date")}
+                    className={fieldErrors.order_date ? "border-destructive" : ""}
                     required
                   />
+                  {fieldErrors.order_date && (
+                    <p className="text-xs text-destructive">{fieldErrors.order_date}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="issue_date">Issue date</Label>
@@ -705,8 +976,13 @@ export function PurchaseOrdersPage() {
                     type="datetime-local"
                     value={form.issue_date}
                     onChange={(e) => handleFieldChange("issue_date", e.target.value)}
+                    onBlur={() => handleFieldBlur("issue_date")}
+                    className={fieldErrors.issue_date ? "border-destructive" : ""}
                     required
                   />
+                  {fieldErrors.issue_date && (
+                    <p className="text-xs text-destructive">{fieldErrors.issue_date}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -723,8 +999,13 @@ export function PurchaseOrdersPage() {
                     onChange={(e) =>
                       handleFieldChange("expected_delivery_date", e.target.value)
                     }
+                    onBlur={() => handleFieldBlur("expected_delivery_date")}
+                    className={fieldErrors.expected_delivery_date ? "border-destructive" : ""}
                     required
                   />
+                  {fieldErrors.expected_delivery_date && (
+                    <p className="text-xs text-destructive">{fieldErrors.expected_delivery_date}</p>
+                  )}
                 </div>
               )}
               {/* Show actual_delivery_date only in edit mode */}
@@ -740,7 +1021,12 @@ export function PurchaseOrdersPage() {
                     onChange={(e) =>
                       handleFieldChange("actual_delivery_date", e.target.value)
                     }
+                    onBlur={() => handleFieldBlur("actual_delivery_date")}
+                    className={fieldErrors.actual_delivery_date ? "border-destructive" : ""}
                   />
+                  {fieldErrors.actual_delivery_date && (
+                    <p className="text-xs text-destructive">{fieldErrors.actual_delivery_date}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -754,8 +1040,13 @@ export function PurchaseOrdersPage() {
                   min={0}
                   value={form.quantity}
                   onChange={(e) => handleFieldChange("quantity", e.target.value)}
+                  onBlur={() => handleFieldBlur("quantity")}
+                  className={fieldErrors.quantity ? "border-destructive" : ""}
                   required
                 />
+                {fieldErrors.quantity && (
+                  <p className="text-xs text-destructive">{fieldErrors.quantity}</p>
+                )}
               </div>
             </div>
 
@@ -798,7 +1089,9 @@ export function PurchaseOrdersPage() {
                   No items added. Click "Add Item" to add item details.
                 </div>
               ) : (
-                <div className="space-y-2 rounded-md border border-input p-3">
+                <div className={`space-y-2 rounded-md border p-3 ${
+                  fieldErrors.items ? "border-destructive" : "border-input"
+                }`}>
                   {form.items.map((item, index) => (
                     <div key={index} className="flex gap-2">
                       <Input
@@ -829,6 +1122,9 @@ export function PurchaseOrdersPage() {
                     </div>
                   ))}
                 </div>
+              )}
+              {fieldErrors.items && (
+                <p className="text-xs text-destructive">{fieldErrors.items}</p>
               )}
               <p className="text-xs text-muted-foreground">
                 Optional: Add custom item details as key-value pairs (e.g., product_name, unit_price, description).
