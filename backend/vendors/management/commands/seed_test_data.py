@@ -76,7 +76,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 4.8,
                 "issue_date": now - timedelta(days=30),
-                "acknowledgment_date": now - timedelta(days=29, hours=2),
+                "acknowledgment_date": now - timedelta(days=29, hours=2),  # 22 hours: 30d to 29d-2h = 1d - 2h = 24h - 2h = 22h
             },
             {
                 "vendor": vendor1,
@@ -89,7 +89,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 4.9,
                 "issue_date": now - timedelta(days=25),
-                "acknowledgment_date": now - timedelta(days=24, hours=1),
+                "acknowledgment_date": now - timedelta(days=24, hours=2),  # 22 hours: 25d to 24d-2h = 1d - 2h = 22h
             },
             {
                 "vendor": vendor1,
@@ -102,7 +102,7 @@ class Command(BaseCommand):
                 "status": "acknowledged",
                 "quality_rating": None,
                 "issue_date": now - timedelta(days=10),
-                "acknowledgment_date": now - timedelta(days=9, hours=3),
+                "acknowledgment_date": now - timedelta(days=9, hours=2),  # 22 hours: 10d to 9d-2h = 1d - 2h = 22h (avg = 22.0)
             },
             {
                 "vendor": vendor1,
@@ -133,7 +133,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 3.5,
                 "issue_date": now - timedelta(days=28),
-                "acknowledgment_date": now - timedelta(days=27, hours=5),
+                "acknowledgment_date": now - timedelta(days=27, hours=8, minutes=20),  # 15.7 hours: 28d to 27d-8h20m = 1d - 8h20m = 24h - 8h20m = 15h40m ≈ 15.7h
             },
             {
                 "vendor": vendor2,
@@ -146,7 +146,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 4.0,
                 "issue_date": now - timedelta(days=20),
-                "acknowledgment_date": now - timedelta(days=19, hours=8),
+                "acknowledgment_date": now - timedelta(days=19, hours=8, minutes=20),  # 15.7 hours: 20d to 19d-8h20m = 1d - 8h20m = 15h40m
             },
             {
                 "vendor": vendor2,
@@ -159,7 +159,7 @@ class Command(BaseCommand):
                 "status": "acknowledged",
                 "quality_rating": None,
                 "issue_date": now - timedelta(days=8),
-                "acknowledgment_date": now - timedelta(days=7, hours=12),
+                "acknowledgment_date": now - timedelta(days=7, hours=8, minutes=20),  # 15.7 hours: 8d to 7d-8h20m = 15h40m (avg ≈ 15.7)
             },
         ])
 
@@ -177,7 +177,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 5.0,
                 "issue_date": now - timedelta(days=35),
-                "acknowledgment_date": now - timedelta(days=34, hours=1),
+                "acknowledgment_date": now - timedelta(days=34, hours=1, minutes=30),  # 22.5 hours: 35d to 34d-1h30m = 1d - 1h30m = 24h - 1h30m = 22h30m = 22.5h
             },
             {
                 "vendor": vendor3,
@@ -190,7 +190,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 4.9,
                 "issue_date": now - timedelta(days=22),
-                "acknowledgment_date": now - timedelta(days=21, hours=2),
+                "acknowledgment_date": now - timedelta(days=21, hours=1, minutes=30),  # 22.5 hours: 22d to 21d-1h30m = 22h30m
             },
             {
                 "vendor": vendor3,
@@ -203,7 +203,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 5.0,
                 "issue_date": now - timedelta(days=15),
-                "acknowledgment_date": now - timedelta(days=14, hours=1),
+                "acknowledgment_date": now - timedelta(days=14, hours=1, minutes=30),  # 22.5 hours: 15d to 14d-1h30m = 22h30m
             },
             {
                 "vendor": vendor3,
@@ -216,7 +216,7 @@ class Command(BaseCommand):
                 "status": "acknowledged",
                 "quality_rating": None,
                 "issue_date": now - timedelta(days=7),
-                "acknowledgment_date": now - timedelta(days=6, hours=2),
+                "acknowledgment_date": now - timedelta(days=6, hours=1, minutes=30),  # 22.5 hours: 7d to 6d-1h30m = 22h30m (avg = 22.5)
             },
         ])
 
@@ -234,7 +234,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 3.8,
                 "issue_date": now - timedelta(days=18),
-                "acknowledgment_date": now - timedelta(days=18, hours=0.5),
+                "acknowledgment_date": now - timedelta(days=18, hours=0),  # ~0 hours response (immediate)
             },
             {
                 "vendor": vendor4,
@@ -247,7 +247,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 4.2,
                 "issue_date": now - timedelta(days=12),
-                "acknowledgment_date": now - timedelta(days=12, hours=1),
+                "acknowledgment_date": now - timedelta(days=12, hours=0),  # ~0 hours response (avg = 0.0)
             },
             {
                 "vendor": vendor4,
@@ -278,7 +278,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 4.7,
                 "issue_date": now - timedelta(days=32),
-                "acknowledgment_date": now - timedelta(days=30, hours=6),
+                "acknowledgment_date": now - timedelta(days=30, hours=8),  # 40 hours: 32d to 30d-8h = 2d - 8h = 48h - 8h = 40h
             },
             {
                 "vendor": vendor5,
@@ -291,7 +291,7 @@ class Command(BaseCommand):
                 "status": "completed",
                 "quality_rating": 4.8,
                 "issue_date": now - timedelta(days=14),
-                "acknowledgment_date": now - timedelta(days=12, hours=8),
+                "acknowledgment_date": now - timedelta(days=12, hours=8),  # 40 hours: 14d to 12d-8h = 2d - 8h = 40h
             },
             {
                 "vendor": vendor5,
@@ -304,7 +304,7 @@ class Command(BaseCommand):
                 "status": "acknowledged",
                 "quality_rating": None,
                 "issue_date": now - timedelta(days=6),
-                "acknowledgment_date": now - timedelta(days=4, hours=10),
+                "acknowledgment_date": now - timedelta(days=4, hours=8),  # 40 hours: 6d to 4d-8h = 2d - 8h = 40h (avg = 40.0)
             },
             {
                 "vendor": vendor5,
