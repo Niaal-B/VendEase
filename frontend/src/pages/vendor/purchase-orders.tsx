@@ -395,14 +395,14 @@ export function VendorPurchaseOrdersPage() {
       {error && (
         <Toast
           message={error}
-          variant="destructive"
+          type="error"
           onClose={() => setError(null)}
         />
       )}
       {success && (
         <Toast
           message={success}
-          variant="default"
+          type="success"
           onClose={() => setSuccess(null)}
         />
       )}
