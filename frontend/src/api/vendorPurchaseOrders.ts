@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { PurchaseOrder, POStatus } from "./purchaseOrders";
+import type { PurchaseOrder } from "./purchaseOrders";
 import type { PaginatedResponse } from "./vendors";
 
 export async function listVendorPurchaseOrders(page?: number) {

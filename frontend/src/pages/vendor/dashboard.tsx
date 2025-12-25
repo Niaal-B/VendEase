@@ -31,14 +31,13 @@ function getStatusBadge(status: PurchaseOrder["status"]) {
 export function VendorDashboardPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await listVendorPurchaseOrders(currentPage);
+        const data = await listVendorPurchaseOrders(1);
         setPurchaseOrders(data.results);
         setTotalCount(data.count);
       } catch (err) {
@@ -48,7 +47,7 @@ export function VendorDashboardPage() {
       }
     };
     fetchData();
-  }, [currentPage]);
+  }, []);
 
   // Calculate metrics
   const stats = {

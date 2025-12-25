@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import {
   listVendorPurchaseOrders,
   acknowledgeVendorPurchaseOrder,
-  type PurchaseOrder,
-  type POStatus,
 } from "@/api/vendorPurchaseOrders";
+import type { PurchaseOrder, POStatus } from "@/api/purchaseOrders";
 import {
   Card,
   CardContent,
