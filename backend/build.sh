@@ -11,4 +11,9 @@ if [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
 fi
 
 # Seed initial data only if database is empty (won't overwrite existing data)
-python manage.py seed_initial_data || true
+echo "=== Starting data seeding process ==="
+python manage.py seed_initial_data --verbosity 2 2>&1 || {
+    echo "Warning: Data seeding command exited with non-zero status"
+    echo "This is okay if database already has data"
+}
+echo "=== Data seeding process completed ==="
