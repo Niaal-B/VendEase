@@ -127,7 +127,7 @@ class Command(BaseCommand):
                 "po_number": "PO-GSI-001",
                 "order_date": now - timedelta(days=28),
                 "expected_delivery_date": now - timedelta(days=18),
-                "actual_delivery_date": now - timedelta(days=19),
+                "actual_delivery_date": now - timedelta(days=17),  # Late delivery (1 day late)
                 "items": {"product": "Office Supplies", "unit_price": 25.00, "category": "Stationery"},
                 "quantity": 500,
                 "status": "completed",
@@ -171,7 +171,7 @@ class Command(BaseCommand):
                 "po_number": "PO-PMC-001",
                 "order_date": now - timedelta(days=35),
                 "expected_delivery_date": now - timedelta(days=25),
-                "actual_delivery_date": now - timedelta(days=24),
+                "actual_delivery_date": now - timedelta(days=25),  # On-time (equal to expected)
                 "items": {"product": "Precision Tools", "unit_price": 450.00, "category": "Manufacturing"},
                 "quantity": 80,
                 "status": "completed",
@@ -184,7 +184,7 @@ class Command(BaseCommand):
                 "po_number": "PO-PMC-002",
                 "order_date": now - timedelta(days=22),
                 "expected_delivery_date": now - timedelta(days=12),
-                "actual_delivery_date": now - timedelta(days=11),
+                "actual_delivery_date": now - timedelta(days=13),  # Early delivery (on-time)
                 "items": {"product": "Machine Parts", "unit_price": 350.00, "category": "Manufacturing"},
                 "quantity": 120,
                 "status": "completed",
@@ -197,7 +197,7 @@ class Command(BaseCommand):
                 "po_number": "PO-PMC-003",
                 "order_date": now - timedelta(days=15),
                 "expected_delivery_date": now - timedelta(days=5),
-                "actual_delivery_date": now - timedelta(days=4),
+                "actual_delivery_date": now - timedelta(days=6),  # Early delivery (on-time)
                 "items": {"product": "Quality Control Equipment", "unit_price": 600.00, "category": "Manufacturing"},
                 "quantity": 40,
                 "status": "completed",
@@ -241,7 +241,7 @@ class Command(BaseCommand):
                 "po_number": "PO-QUICK-002",
                 "order_date": now - timedelta(days=12),
                 "expected_delivery_date": now - timedelta(days=2),
-                "actual_delivery_date": now - timedelta(days=3),
+                "actual_delivery_date": now - timedelta(days=1),  # Late delivery (1 day late)
                 "items": {"product": "Delivery Vehicles Parts", "unit_price": 180.00, "category": "Logistics"},
                 "quantity": 60,
                 "status": "completed",
@@ -272,7 +272,7 @@ class Command(BaseCommand):
                 "po_number": "PO-ELITE-001",
                 "order_date": now - timedelta(days=32),
                 "expected_delivery_date": now - timedelta(days=22),
-                "actual_delivery_date": now - timedelta(days=21),
+                "actual_delivery_date": now - timedelta(days=23),  # Early delivery (on-time)
                 "items": {"product": "Premium Components", "unit_price": 800.00, "category": "Electronics"},
                 "quantity": 30,
                 "status": "completed",
@@ -285,7 +285,7 @@ class Command(BaseCommand):
                 "po_number": "PO-ELITE-002",
                 "order_date": now - timedelta(days=14),
                 "expected_delivery_date": now - timedelta(days=4),
-                "actual_delivery_date": now - timedelta(days=3),
+                "actual_delivery_date": now - timedelta(days=5),  # Early delivery (on-time)
                 "items": {"product": "Specialized Equipment", "unit_price": 1200.00, "category": "Electronics"},
                 "quantity": 25,
                 "status": "completed",
