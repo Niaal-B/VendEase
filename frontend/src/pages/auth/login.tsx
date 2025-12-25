@@ -28,7 +28,7 @@ export function LoginPage() {
         navigate(vendor ? "/vendor/dashboard" : "/");
       } catch {
         // If check fails, default to admin dashboard
-        navigate("/");
+      navigate("/");
       }
     } catch (err) {
       console.error(err);

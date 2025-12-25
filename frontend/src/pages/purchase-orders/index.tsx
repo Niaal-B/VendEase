@@ -909,7 +909,6 @@ export function PurchaseOrdersPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* Simplified, professional 2-column form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

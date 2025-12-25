@@ -26,14 +26,14 @@ const router = createBrowserRouter([
     children: [
       {
         element: <AdminGuard />,
+    children: [
+      {
+        path: "/",
+        element: <MainLayout />,
         children: [
-          {
-            path: "/",
-            element: <MainLayout />,
-            children: [
-              { path: "/", element: <DashboardPage /> },
-              { path: "/vendors", element: <VendorsPage /> },
-              { path: "/purchase-orders", element: <PurchaseOrdersPage /> },
+          { path: "/", element: <DashboardPage /> },
+          { path: "/vendors", element: <VendorsPage /> },
+          { path: "/purchase-orders", element: <PurchaseOrdersPage /> },
             ],
           },
         ],
@@ -41,12 +41,12 @@ const router = createBrowserRouter([
       {
         element: <VendorGuard />,
         children: [
-          {
-            path: "/vendor",
-            element: <VendorLayout />,
-            children: [
-              { path: "/vendor/dashboard", element: <VendorDashboardPage /> },
-              { path: "/vendor/purchase-orders", element: <VendorPurchaseOrdersPage /> },
+      {
+        path: "/vendor",
+        element: <VendorLayout />,
+        children: [
+          { path: "/vendor/dashboard", element: <VendorDashboardPage /> },
+          { path: "/vendor/purchase-orders", element: <VendorPurchaseOrdersPage /> },
             ],
           },
         ],

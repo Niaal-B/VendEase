@@ -10,3 +10,5 @@ if [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
     python manage.py create_admin || true
 fi
 
+# Seed initial data only if database is empty (won't overwrite existing data)
+python manage.py seed_initial_data || true
