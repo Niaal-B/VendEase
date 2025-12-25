@@ -25,14 +25,7 @@ class PurchaseOrderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
     lookup_field = "pk"
     
     def perform_update(self, serializer):
-        # Save the updated instance
-        instance = serializer.save()
-        
-        # If status is being changed to 'completed', set actual_delivery_date if not already set
-        if 'status' in serializer.validated_data and instance.status == 'completed':
-            if instance.actual_delivery_date is None:
-                instance.actual_delivery_date = timezone.now()
-                instance.save(update_fields=['actual_delivery_date'])
+        serializer.save()
 
 
 class PurchaseOrderAcknowledgeView(generics.UpdateAPIView):

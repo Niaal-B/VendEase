@@ -6,7 +6,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseOrder
         fields = "__all__"
-        read_only_fields = ("acknowledgment_date", "actual_delivery_date")
+        read_only_fields = ("acknowledgment_date",) 
     
     def create(self, validated_data):
         now = timezone.now()
