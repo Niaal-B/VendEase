@@ -755,6 +755,9 @@ export function PurchaseOrdersPage() {
                       Expected Delivery
                     </th>
                     <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide hidden lg:table-cell">
+                      Acknowledged
+                    </th>
+                    <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide hidden lg:table-cell">
                       Quantity
                     </th>
                     <th className="px-6 py-4 font-semibold text-xs uppercase tracking-wide hidden lg:table-cell">
@@ -798,6 +801,23 @@ export function PurchaseOrdersPage() {
                               minute: "2-digit",
                             })}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 hidden lg:table-cell">
+                          {po.acknowledgment_date ? (
+                            <>
+                              <div className="text-sm">
+                                {new Date(po.acknowledgment_date).toLocaleDateString()}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(po.acknowledgment_date).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 hidden lg:table-cell">
                           <span className="font-medium">{po.quantity}</span>
@@ -1026,6 +1046,24 @@ export function PurchaseOrdersPage() {
                   {fieldErrors.actual_delivery_date && (
                     <p className="text-xs text-destructive">{fieldErrors.actual_delivery_date}</p>
                   )}
+                </div>
+              )}
+              {/* Show acknowledgment_date only in edit mode and if it exists (read-only) */}
+              {formMode === "edit" && form.acknowledgment_date && (
+                <div className="space-y-2">
+                  <Label htmlFor="acknowledgment_date">
+                    Acknowledgment date (read-only)
+                  </Label>
+                  <Input
+                    id="acknowledgment_date"
+                    type="datetime-local"
+                    value={form.acknowledgment_date}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This date is set automatically when the vendor acknowledges the order
+                  </p>
                 </div>
               )}
             </div>

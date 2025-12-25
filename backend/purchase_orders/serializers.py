@@ -15,3 +15,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
         validated_data['status'] = 'pending'
         
         return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        validated_data.pop('acknowledgment_date', None)
+        return super().update(instance, validated_data)

@@ -218,6 +218,11 @@ export function VendorPurchaseOrdersPage() {
                         <p>
                           Order Date: {new Date(po.order_date).toLocaleString()}
                         </p>
+                        {po.acknowledgment_date && (
+                          <p>
+                            Acknowledged: {new Date(po.acknowledgment_date).toLocaleString()}
+                          </p>
+                        )}
                         <p>
                           Expected Delivery:{" "}
                           {po.expected_delivery_date
