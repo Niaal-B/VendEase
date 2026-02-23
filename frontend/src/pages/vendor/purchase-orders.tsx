@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   listVendorPurchaseOrders,
   acknowledgeVendorPurchaseOrder,
@@ -39,12 +40,16 @@ function getStatusBadge(status: POStatus) {
 }
 
 export function VendorPurchaseOrdersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageParam = searchParams.get("page");
+  const initialPage = pageParam ? parseInt(pageParam, 10) : 1;
+  
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [ackLoadingId, setAckLoadingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
@@ -52,6 +57,15 @@ export function VendorPurchaseOrdersPage() {
   const [isAckDialogOpen, setIsAckDialogOpen] = useState(false);
   const [poToAcknowledge, setPoToAcknowledge] = useState<PurchaseOrder | null>(null);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
+
+  // Sync currentPage with URL when URL changes
+  useEffect(() => {
+    const page = pageParam ? parseInt(pageParam, 10) : 1;
+    if (page >= 1 && !isNaN(page) && page !== currentPage) {
+      setCurrentPage(page);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageParam]); // Only depend on pageParam to avoid loops when currentPage changes
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +86,11 @@ export function VendorPurchaseOrdersPage() {
     };
     fetchData();
   }, [currentPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSearchParams({ page: page.toString() });
+  };
 
   useEffect(() => {
     if (!success) return;
@@ -269,7 +288,7 @@ export function VendorPurchaseOrdersPage() {
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={setCurrentPage}
+                onPageChange={handlePageChange}
               />
             </div>
           )}

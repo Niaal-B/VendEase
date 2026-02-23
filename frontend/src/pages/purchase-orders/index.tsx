@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   listPurchaseOrders,
   createPurchaseOrder,
@@ -70,6 +71,10 @@ const emptyForm: PurchaseOrderForm = {
 };
 
 export function PurchaseOrdersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageParam = searchParams.get("page");
+  const initialPage = pageParam ? parseInt(pageParam, 10) : 1;
+  
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,7 +82,7 @@ export function PurchaseOrdersPage() {
   const [ackLoadingId, setAckLoadingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
 
   const [formMode, setFormMode] = useState<FormMode>("create");
@@ -91,6 +96,15 @@ export function PurchaseOrdersPage() {
   const [poToRate, setPoToRate] = useState<PurchaseOrder | null>(null);
   const [ratingValue, setRatingValue] = useState<string>("");
   const [ratingLoading, setRatingLoading] = useState(false);
+
+  // Sync currentPage with URL when URL changes
+  useEffect(() => {
+    const page = pageParam ? parseInt(pageParam, 10) : 1;
+    if (page >= 1 && !isNaN(page) && page !== currentPage) {
+      setCurrentPage(page);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageParam]); // Only depend on pageParam to avoid loops when currentPage changes
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -114,6 +128,11 @@ export function PurchaseOrdersPage() {
     };
     fetchAll();
   }, [currentPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSearchParams({ page: page.toString() });
+  };
 
   useEffect(() => {
     if (!success) return;
@@ -578,7 +597,7 @@ export function PurchaseOrdersPage() {
       setTotalPages(Math.ceil(data.count / 10));
       // If current page is empty and not page 1, go to previous page
       if (data.results.length === 0 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
+        handlePageChange(currentPage - 1);
       }
     } catch (err) {
       console.error(err);
@@ -910,7 +929,7 @@ export function PurchaseOrdersPage() {
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              onPageChange={(page) => setCurrentPage(page)}
+              onPageChange={handlePageChange}
             />
           </div>
         )}
