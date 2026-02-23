@@ -16,10 +16,6 @@ class PurchaseOrderListCreateView(generics.ListCreateAPIView):
 
 
 class PurchaseOrderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    Admin endpoint to retrieve, update, and delete purchase orders.
-    Supports both PUT (full update) and PATCH (partial update).
-    """
     queryset = PurchaseOrder.objects.select_related("vendor").all()
     serializer_class = PurchaseOrderSerializer
     lookup_field = "pk"
